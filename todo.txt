@@ -1,0 +1,229 @@
+[TODO]
+( ) move to github
+( ) examples for NestButton, NestTextInput
+( ) look into how Starling calculates DisplayObject width/height,
+	consider adapting for Nest.
+
+//-----distro------//
+( ) more examples...
+	( ) events
+		( ) bubbling: target/currentTarget
+		( ) bubbling: stopPropagation
+		( ) capture: phase
+(-) figure out how to build without including psgExamples, core.jar, etc
+		maybe moot, since i don't want this stuff visible via googlecode Browse
+//-----------------//
+
+
+//-----functionality-----//
+( ) fix KLUDGE in NestSprite.triggerMouseEvent()
+	this may tie into Mouse/KeyEvent refactoring (below)
+( ) NestSprite.handleDisplayListEvent() only processes MOUSE_CLICKED events if they're
+	within bounds. this creates a problem for, for example, observing a NestButton
+	to handle its MOUSE_CLICKED event -- handleDisplayListEvent() filters out the event.
+	not sure yet how to address this problem; for now, a NestButton MOUSE_CLICKED event
+	should be handled by its parent, as it bubbles up through the display list.
+( ) refactor to simplify Nest's Mouse/KeyEvents,
+	now that Processing is wrapping AWTEvents.
+	note: cannot eliminate; bubbling/propagation implemented within nest.events.Event.
+		...or maybe can? -- allow them to contain Nest-specific data
+		via an interface, java-multiple-inheritance-style? 
+( ) find a way to handle g changes while within update() loop
+	(check at end of cycle, if different than it was, throw error?
+	or just ignore changes?)
+( ) implement mouseEntered / mouseExited by checking bounds every time mouse moves
+( ) test dispose() in profiler
+	( ) remove 'not yet tested' comments
+( ) hitTest
+	( ) pixels
+		maybe there are hints for this in the processing picking lib?
+		code.google.com/p/processing-picking-library/
+	(X) bounding box
+	(X) mouseEvents reliant on hitTests
+( ) transform point from PSprite coord system to arbitrary other PSprite coord system
+( )	implement z-sorting
+	PSpriteContainer.zSortingEnabled?
+	then flag any changes in z, or newly-added children, or rearrangement of child list,
+	and re-sort child list based on childrens' zs.
+( )	implement mouse and screen coords when rotated/scaled/translated into 3D
+( ) consider writing custom Observer setup using generics:
+	http://stackoverflow.com/questions/4129280/observer-design-how-to-access-method-invoke-scope
+	http://download.oracle.com/javase/tutorial/java/generics/index.html
+//-----------------------//	
+
+
+
+(X) dispatch non-Mouse/KeyEvents into display list event flow
+	how would this work?  if an ED has a reference to the PSC,
+	that could work, but that's only accessible if the ED is
+	a PSprite and is on the display list.
+	(X) alternatively, just bubble if bubbles=true.
+		no capture phase (but there probably *is* a target phase).
+	(X) should all Event subclasses follow event flow?
+(X) test blendMode multiple branches deep
+(X) make blendMode example, as in NestSprite.blendMode TODO
+(X) rebuild, include new examples, finish updating REVISIONS.txt
+(X) changes for Processing 2.0 per Elie's email
+	(X) register for events
+	(X) event IDs
+(X) add NestImageSprite
+(X) test on other platforms:
+	(X) windows
+	(-) linux
+(X) create javadoc
+	(X) inline examples
+		(X) possible to insert an example in the middle of an html javadoc comment?
+		(-) or to insert multiple examples in a row?
+		(-) or to title an example (in html link)?
+	(X) complete all javadoc comments
+		(X) add links to AS docs
+			(X) PSprite -- AS display list
+			(X) Event -- AS event flow
+		(X) PSprite class
+		(X) PSprite ctors
+		(X) PSprite protected methods
+	(-) is there any way to hide a public field from javadoc?
+		using @exclude for now, tho not actually implemented.
+		for PSC.mouseEvent()/keyEvent(), ED.update().
+	(X) fix javadoc build warnings
+	(X) document only psg package
+	(-) write overview page?
+		(-) note, must use P3D or OPENGL
+(X) set up webpages:
+	(X) googlecode wiki
+		(X) just link to transmote -- more indexing for transmote.
+		(-) remove PSGBuild stuff from svn -- it appears in Source in googlecode
+		(X) add a download to Downloads tab
+	(X) http://transmote.com/psg
+		(X) output from library template
+		(X) reference
+		(X) link to googlecode
+(X) remove .DS_Store files before distributing
+(X) fix ant build warnings
+(X) add inline examples to javadoc where useful via @example tag
+(X) RENAME LIB TO 'NEST'
+	(X) change package name
+	(X) change transmote URL
+	(X) update all comments / javadocs / documentation
+	(X) set up google code site
+		(X) set up analytics
+		(X) set up SVN
+(X) examples, written in PDE:
+	(X) events
+		(X) sprites listen to each other; rotate a bit when the other is clicked
+	(X) explanatory text at top of every example
+	(X) multiple subclasses, each draw()ing differently
+	(X) child list
+		(X) addChild
+		(X) removeChild
+	(X) mouse events
+	(X) key events
+	(X) setting bounds (was: width/height)
+		- draw rect to display bounds on-screen,
+		  that is separate/different from graphic content.
+	(X) do i need access modifiers in examples/subclasses?
+(X) phased implementation of event flow
+	(X) simple event flow: dispatch events down from PSpriteContainer, then back up.
+	(X) require PSprites to register for display list events,
+		either by opting in or out (e.g. mouseEnabled/Children)
+	(X) implement psg.events.Mouse/KeyEvents
+		(X) Event.target
+		(X) Event.currentTarget
+		(X) Event.phase
+		(X) Event.stopPropagation
+		(X) Event.awtEvent
+(X) when a PSprite handles a bounded mouse event, it should bubble the event up
+	through all its parents, and override bounds checks on the parents.
+(X) build as library (.jar):
+	http://wiki.processing.org/w/How_to_Create_a_Contributed_Library
+	(X) without lib/base/opengl, but still allows use of size(w,h,OPENGL)?
+(X) find more elegant way to handle bounds vs. width/height. 
+	maybe have left/top?
+	or completely separate mouse bounds from drawn width/height?
+	think about what bounds are used for, and what width/height are used for.
+		maybe they're mutually exclusive, and can be named more clearly.
+	
+	width/height used for drawing, layout, etc --
+	for references both internal and external to the PSprite instance.
+	also used for mouse event checking (internally).
+	bounds.left and bounds.top used only internally, for mouse event checking.
+	
+	perhaps best strategy is to maintain bounds internally,
+	and to update it when it's used, not when changed
+	(when read, not when set).
+(X) remove de/registration until used
+	(maybe removed permanently, in favor of mouseEnabled/Children)
+(-) would *really* be useful to have a reference to the PApplet in every PSprite on init....
+	PSprite could get this from PSpriteContainer via a package-private member on PSC.
+(X) incorporate recent changes made in FlickrViz
+(X) update to work with v1.5.
+	pre-release here: http://forum.processing.org/topic/processing-0195-now-posted
+(X) change license to GPL, not BSD.
+	derivative work of processing, therefore must use GPL.
+	(X) change header comments
+	(X) change on googlecode
+(X) do i even need PSpriteContainer?
+	just removed PSpriteContainer.updateChildren(), as i realized it was
+	redundant with PSprite.pre/render()...does PSC still do anything necessary and
+	unique from PSprite? 
+		yes, it wraps everything needed to update() in one call.
+		that's about it, tho...
+(X) test in processing IDE
+	http://wiki.processing.org/w/How_to_Install_a_Contributed_Library
+(-) way to increase 'too many calls to pushMatrix()'?
+	this is an issue with the Recusrion example with > 30 levels on display list...
+(.)	implement width/height
+	- set manually, not yet automatically
+(.)	implement bounded mouse interactivity
+		(X) bounded by rect
+		( ) bounded by visible pixels
+
+(X) globalToLocal
+(X) localToGlobal
+(X) psg in 2D
+	(X) change PSprite
+	(X) change examples to use P2D
+(X) add license info (BSD? check other processing libs)
+(X) move out of utils, into com.transmote.scenegraph
+(-) getBounds (rel to arbitrary PSprite's coordinate space)
+(X) getRect (rel to parent's coordinate space)
+(-)	implement more AS3-style event handling
+	by abstracting handleEvent as something that happens only
+	at PSprite (superclass) level, then calls a registered method
+	(event handler), passing a correctly-typed Event subclass.
+		-- not possible, as methods can't be passed/stored as in AS3.
+(X)	try to rely on Java Observable pattern as much as possible;
+	if possible, don't rewrite handler queues.
+(-) Event types should be Strings, not ints, to avoid overlapping Event types.
+	-- not necessary if checking Event subclass in handler already.
+(X) would be nice to have direct access in event handlers to
+	event target, it's a pain in the ass to get access via handleEvent / Observable...
+		-- solved with dispatch/handleEvent(Event)
+(X) MouseEvents should be able to report coords relative to
+	PSprite on which MouseEvent occurred.
+	(-) note, this is now available directly from PSprite,
+		but perhaps there should be a MouseEvent wrapper class
+		that can encapsulate this and other (what other?) info?
+(X)	switching child index
+(X)	reparenting -- if addChild is called
+	when already someone else's child, switch parents
+(X)	numChildren
+(-)	childList accessor?  (why is this not visible in AS3?
+	probably an access issue, may be unsafe to give direct access to all children...)
+(X)	scaleX/Y/Z
+(X)	change getter method signatures to remove 'get', if possible.
+	so, instead of getWidth(), width().
+(X)	visibility (for self and children)
+(X)	implement interactivity
+
+
+
+[BUGS]
+( ) if Event.stopPropagation() is called from within a mousePressed handler,
+	that can prevent mousePressedOutside handlers from receiving the Event.
+	need to rewrite PSprite.processDisplayListEvent to only stop propagation
+	of the exact same event type.  a bit tricky, since mousePressed/Outside
+	both stem from AWTEvent.MOUSE_PRESSED.
+	( ) technically, Events of different types should be different objects...
+		currently, the Event with type=MOUSE_PRESSED is the same object as the
+		Event with type=MOUSE_PRESSED_OUTSIDE.

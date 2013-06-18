@@ -1,0 +1,186 @@
+-----psg event flow-----
+PSpriteContainer registers with PApplet for mouse/key events
+goal is to only send events down to PSprites that are listening for them...
+
+note: perhaps per-pixel hit detection can be efficient due to event flow?
+when MouseEvent happens, rather than checking ALL PSprites for collision,
+check top one, then recurse down thru children.  if parent bounds include
+childrens' bounds, then an event that does not hitTest against parent
+cannot hitTest against its child.  this still requires parent bounds to update
+as children translate/rotate/scale, however.
+
+[phased implementation]
+1)	maintain InputEvents
+	do not require PSprites to register for InputEvents
+	focus on getting flow correct.
+
+2)	require PSprites to register for InputEvents
+	improve efficiency with hasListener / hasListenerDescendants
+	
+	TODO:	rather than opting in, should we opt out?
+			set mouseEnabled = false
+			what about keyevents?  should avoid a double standard...
+
+3)	implement com.transmote.psg.events.Mouse/KeyEvents, adding:
+	- phase
+	- current/target
+	- stopPropagation
+	- awtEvent -- keep original event for reference
+	and replace InputEvent in PSprite with psg.Event
+
+4)	dispatch other events into display list,
+	like psg.Events for added/removed...
+	(just bubble up, if event.bubbles)
+
+
+
+----------------------------
+----------phase 1+----------
+----------------------------
+
+[on event]
+----- WEDNESDAY:
+note:	EventDispatcher must make calls to set Event phase, target, etc,
+		since we need package-level access to Events.  therefore,
+		PSprite should extend EventDispatcher, just like in AS3,
+		so that it can make protected calls (defined in ED, not in PSprite)
+		to set properties of an Event moving through the flow.
+		need to consider details of what this means in terms of
+		allowing composition use of EventDispatcher.....
+		for now, might be simpler to just keep as composition and
+		expose Event manipulation as public methods of ED :/
+		
+		now that PSprite extends ED, should ED implement Observer,
+		rather than PSprite?  and PSprite can override update()?
+		or perhaps PSprite's implementation of update() should all
+		move up to ED?
+		
+note:	no stopImmediatePropagation, because each node can only have one handler
+
+mouse/key events sent from PApplet to PSpriteContainer,
+	then down through child list.
+	when PSpriteContainer receives an Event,
+	it copies it to a com.transmote.psg.events.MouseEvent / KeyEvent,
+	it sets evt.phase = CAPTURE.
+
+
+-----SUNDAY-----
+continue with event phase, in PSprite.processDisplayListEvent:
+only proceed down through display list if hasListenerDescendant.
+	but how to know?
+		must PSprite instances opt *in* to event handling, rather than out?
+		-- no: opt-in by default, with inputEnabled/Children.
+		   so, all this "hasListener" stuff will actually be tied to
+		   inputEnabled / inputChildren.
+----------------
+
+	
+void processEvent(evt) {
+	// capture phase
+	if (hasCaptureListener) { call it }
+	if (evt.propagationStopped) { return; }
+	
+//	if (numListenerDescendants > 0) {
+	if (hasListenerDescendant) {
+		for (each child) {
+			evt.phase = CAPTURE;
+			child.processEvent(evt);
+			if (evt.propagationStopped) {
+				return;
+			}
+		}
+	} else {
+		if (hasListener) {
+			// target phase
+			// how does this work in AS3 for non-location-specific events,
+			// like MouseEvent.MOUSE_DOWN or KeyEvent.KEY_DOWN?
+			// do multiple objects get to become Event.target /
+			// are there multiple target phases per Event flow?
+			evt.phase = TARGET
+			evt.target = this;
+		}
+	}
+	
+	if (hasListener) {
+		// evt.phase will be BUBBLING if any descendants
+		// already processed, else will be TARGET
+		evt.currentTarget = this;
+		handleDisplayListEvent();
+	}
+	
+	evt.phase = BUBBLING;
+}
+
+void handleDisplayListEvent(evt) {
+	// combine current functionality of
+	// PSprite.mouseEvent() and PSprite.keyEvent()
+	// to correctly direct events to handlers
+}
+
+
+
+----------------------------
+----------phase 2+----------
+----------------------------
+
+note: left pendingRegistration in PSprite.
+		evaluate whether it's needed in phase 2.
+		also check deregistration in dispose().
+
+[register as mouse/key listener]
+	app code calls this protected final method in PSprite? EventDispatcher?,
+	to ensure no overriding
+	
+	private boolean hasListener;
+	hasListener = true;
+	if (parent != null) {
+		parent.onListenerDescendantAdded();
+	}
+
+
+
+[deregister as mouse/key listener]
+	app code calls this protected final method in PSprite? EventDispatcher?,
+	to ensure no overriding
+	
+	hasListener = false;
+	if (parent != null) {
+		parent.onListenerDescendantRemoved();
+	}
+
+
+
+[on added]
+	if (hasListener || hasListenerDescendants) {
+		if (parent != null) {
+			parent.onListenerDescendantAdded();
+		}
+	}
+
+void onListenerDescendantAdded () {
+	// alternately, could maintain count (numListenerDescendants),
+	// and += child.numListenerDescendants (passed as param)
+	hasListenerDescendant = true;
+	if (parent != null) {
+		parent.onDescendantListenerAdded();
+	}
+}
+
+
+
+[on removed]
+	if (hasListener || hasListenerDescendants) {
+		if (parent != null) {
+			parent.onListenerDescendantAdded();
+		}
+	}
+
+void onListenerDescendantRemoved () {
+	// check all descendants for hasListener,
+	// and set hasListenerDescendant accordingly.
+	// alternately, could maintain count (numListenerDescendants),
+	// and -= child.numListenerDescendants (passed as param)
+	if (parent != null) {
+		parent.onListenerDescendantRemoved();
+	}
+}
